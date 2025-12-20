@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><link rel="manifest" href="manifest.json">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#007bff">
+
+<script>
+  // Registra el Service Worker para que sea instalable
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proforma Técnica de Cirel</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f7f9fc; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+        h1 { color: #8e24aa; text-align: center; margin-bottom: 25px; }
+        h2 { color: #4a148c; border-bottom: 2px solid #e1bee7; padding-bottom: 5px; margin-top: 25px; }
+        .input-group, .result-group { display: flex; align-items: center; margin-bottom: 12px; }
+        label { flex: 4; font-weight: bold; color: #555; }
+        input[type="number"], input[type="text"], .resultado-valor { flex: 1; padding: 10px; border: 1px solid #c39bd3; border-radius: 6px; font-size: 16px; text-align: right; background-color: #fff; }
+        input[type="text"] { text-align: left; }
+        .unidad { margin-left: 10px; font-weight: normal; color: #777; flex: 0.5; }
+        
+        .resaltado-bloque { background-color: #e3f2fd; color: #0d47a1; font-weight: bold; }
+        .resaltado-impresion { background-color: #f3e5f5; color: #7b1fa2; font-weight: bold; }
+        .resaltado-cobro { background-color: #fff3e0; color: #e65100; font-weight: bold; }
+        .resultado-iva { background-color: #fff9c4; color: #f57f17; font-weight: bold; }
+        .resultado-costo-final { background-color: #c8e6c9; color: #1b5e20; font-size: 1.5em; font-weight: bold; }
+        
+        .btn-imprimir {
+            display: block; width: 100%; padding: 15px; background-color: #4a148c; color: white;
+            border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin: 20px 0;
+        }
+
+        #visualizador-container { margin-top: 30px; padding: 20px; border: 2px dashed #9c27b0; background-color: #f3e5f5; text-align: center; overflow: auto; }
+        #cirel-area { position: relative; margin: 20px auto; border: 2px solid #607d8b; background-color: #ffffff; display: inline-block; }
+        #visualizador { position: relative; border: 1px dotted #FF6F00; box-sizing: border-box; }
+        .etiqueta-simulada { position: absolute; background-color: #000; }
+
+        .tabla-opt { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
+        .tabla-opt th, .tabla-opt td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .mejor { background-color: #c8e6c9; font-weight: bold; }
+
+        @media print {
+            .btn-imprimir, hr, .input-group:not(.imprimir-si), #visualizador-container, #seccion-opt, h2:nth-of-type(1), h2:nth-of-type(2) { display: none !important; }
+            body { background-color: white; padding: 0; }
+            .container { box-shadow: none; border: none; width: 100%; }
+            input { border: none !important; background: transparent !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📄 Proforma de Cirel para Etiquetas</h1>
+
+    <div class="input-group imprimir-si">
+        <label>Cliente:</label>
+        <input type="text" id="cliente_nombre" placeholder="Nombre del Cliente">
+    </div>
+    <div class="input-group imprimir-si">
+        <label>Fecha:</label>
+        <input type="text" id="proforma_fecha">
+    </div>
+
+    <hr>
+
+    <h2>1. Datos de Entrada</h2>
+    <div class="input-group"><label>Medidas Etiqueta (Ancho x Alto mm):</label>
+        <input type="number" id="ancho_mm" value="50" oninput="calcular()">
+        <input type="number" id="alto_mm" value="30" oninput="calcular()">
+    </div>
+    <div class="input-group"><label>Gaps (H x V mm):</label>
+        <input type="number" id="gap_h_mm" value="3" oninput="calcular()">
+        <input type="number" id="gap_v_mm" value="3" oninput="calcular()">
+    </div>
+    <div class="input-group"><label>Total Etiquetas / Columnas:</label>
+        <input type="number" id="total_etiquetas" value="10" oninput="calcular()">
+        <input type="number" id="num_columnas" value="2" oninput="calcular()">
+    </div>
+
+    <div id="seccion-opt">
+        <h2>2. Análisis de Optimización</h2>
+        <div id="tabla-comparativa"></div>
+    </div>
+
+    <hr>
+
+    <h2>3. Desglose de Medidas Técnicas (cm)</h2>
+    <div class="result-group">
+        <label>Bloque Etiquetas (Neto):</label>
+        <div class="resultado-valor resaltado-bloque" id="dim_bloque">0 x 0</div>
+        <span class="unidad">cm</span>
+    </div>
+    <div class="result-group">
+        <label>Área de Impresión (+Márgenes mm):</label>
+        <div class="resultado-valor resaltado-impresion" id="dim_impresion">0 x 0</div>
+        <span class="unidad">cm</span>
+    </div>
+    <div class="result-group">
+        <label>Área de Cobro (+1cm excedente):</label>
+        <div class="resultado-valor resaltado-cobro" id="dim_cobro">0 x 0</div>
+        <span class="unidad">cm</span>
+    </div>
+
+    <hr>
+
+    <h2>4. Resumen de Costos</h2>
+    <div class="input-group"><label>Costo cm² (USD):</label><input type="number" id="costo_cm2" value="0.06" step="0.01" oninput="calcular()"></div>
+    <div class="input-group"><label>N° de Cireles:</label><input type="number" id="num_cireles" value="1" min="1" oninput="calcular()"></div>
+    
+    <div class="result-group"><label>Área Cobrable Total:</label><div class="resultado-valor" id="area_total">0</div><span class="unidad">cm²</span></div>
+    <div class="result-group"><label>Subtotal:</label><div class="resultado-valor" id="subtotal">0</div><span class="unidad">USD</span></div>
+    <div class="result-group"><label>IVA (15%):</label><div class="resultado-valor resultado-iva" id="iva">0</div><span class="unidad">USD</span></div>
+    <div class="result-group" style="margin-top: 10px;"><label>TOTAL NETO A PAGAR:</label><div class="resultado-valor resultado-costo-final" id="total">0</div><span class="unidad">USD</span></div>
+
+    <button class="btn-imprimir" onclick="window.print()">🖨️ IMPRIMIR PROFORMA</button>
+
+    <div id="visualizador-container">
+        <p>Previsualización de Impresión</p>
+        <div id="cirel-area"><div id="visualizador"></div></div>
+    </div>
+</div>
+
+<script>
+    const MARGEN_H_LADO = 4.5; 
+    const MARGEN_V_SUP = 6.0;  
+    const MARGEN_V_INF = 3.0;  
+    const EXCESO_COBRO = 10.0; 
+
+    document.getElementById('proforma_fecha').value = new Date().toLocaleDateString();
+
+    function obtenerCalculos(w, h, gh, gv, total, cols, costoCm2, nCireles) {
+        const filas = Math.ceil(total / cols) || 0;
+        const bloqueW = (cols * w) + ((cols - 1) * gh);
+        const bloqueH = (filas * h) + ((filas - 1) * gv);
+        
+        const impW = bloqueW + (MARGEN_H_LADO * 2);
+        const impH = bloqueH + MARGEN_V_SUP + MARGEN_V_INF;
+        
+        const cobroW = impW + (EXCESO_COBRO * 2);
+        const cobroH = impH + (EXCESO_COBRO * 2);
+        
+        const areaCm2 = (cobroW / 10) * (cobroH / 10);
+        const subtotal = areaCm2 * costoCm2 * nCireles;
+        const totalIva = subtotal * 1.15;
+
+        return { bloqueW, bloqueH, impW, impH, cobroW, cobroH, areaCm2, subtotal, totalIva, filas };
+    }
+
+    function calcular() {
+        const w = parseFloat(document.getElementById('ancho_mm').value) || 0;
+        const h = parseFloat(document.getElementById('alto_mm').value) || 0;
+        const gh = parseFloat(document.getElementById('gap_h_mm').value) || 0;
+        const gv = parseFloat(document.getElementById('gap_v_mm').value) || 0;
+        const total = parseFloat(document.getElementById('total_etiquetas').value) || 0;
+        const cols = parseFloat(document.getElementById('num_columnas').value) || 0;
+        const costoCm2 = parseFloat(document.getElementById('costo_cm2').value) || 0;
+        const nCireles = parseFloat(document.getElementById('num_cireles').value) || 0;
+
+        if (total === 0 || cols === 0) return;
+
+        const normal = obtenerCalculos(w, h, gh, gv, total, cols, costoCm2, nCireles);
+        const rotada = obtenerCalculos(h, w, gv, gh, total, cols, costoCm2, nCireles);
+
+        // Actualizar Medidas en pantalla (Normal)
+        document.getElementById('dim_bloque').textContent = (normal.bloqueW/10).toFixed(2) + " x " + (normal.bloqueH/10).toFixed(2);
+        document.getElementById('dim_impresion').textContent = (normal.impW/10).toFixed(2) + " x " + (normal.impH/10).toFixed(2);
+        document.getElementById('dim_cobro').textContent = (normal.cobroW/10).toFixed(2) + " x " + (normal.cobroH/10).toFixed(2);
+        
+        document.getElementById('area_total').textContent = normal.areaCm2.toFixed(2);
+        document.getElementById('subtotal').textContent = normal.subtotal.toFixed(2);
+        document.getElementById('iva').textContent = (normal.subtotal * 0.15).toFixed(2);
+        document.getElementById('total').textContent = normal.totalIva.toFixed(2);
+
+        // Tabla de Optimización
+        const esMejorRotar = rotada.totalIva < (normal.totalIva - 0.01);
+        document.getElementById('tabla-comparativa').innerHTML = `
+            <table class="tabla-opt">
+                <tr><th>Opción</th><th>Área Cobro (cm)</th><th>Total (+IVA)</th><th>Estado</th></tr>
+                <tr class="${!esMejorRotar ? 'mejor' : ''}">
+                    <td>Normal</td><td>${(normal.cobroW/10).toFixed(2)}x${(normal.cobroH/10).toFixed(2)}</td>
+                    <td>$${normal.totalIva.toFixed(2)}</td><td>${!esMejorRotar ? '✔ Recomendado' : ''}</td>
+                </tr>
+                <tr class="${esMejorRotar ? 'mejor' : ''}">
+                    <td>Rotada</td><td>${(rotada.cobroW/10).toFixed(2)}x${(rotada.cobroH/10).toFixed(2)}</td>
+                    <td>$${rotada.totalIva.toFixed(2)}</td><td>${esMejorRotar ? '✔ Mejor Precio' : ''}</td>
+                </tr>
+            </table>`;
+
+        // Visualizador
+        const escala = 1.0;
+        const vis = document.getElementById('visualizador');
+        const area = document.getElementById('cirel-area');
+        vis.innerHTML = '';
+        area.style.width = (normal.impW * escala) + "px";
+        area.style.height = (normal.impH * escala) + "px";
+        vis.style.width = (normal.bloqueW * escala) + "px";
+        vis.style.height = (normal.bloqueH * escala) + "px";
+        vis.style.left = (MARGEN_H_LADO * escala) + "px";
+        vis.style.top = (MARGEN_V_SUP * escala) + "px";
+
+        let d = 0;
+        for(let r=0; r<normal.filas; r++) {
+            for(let c=0; c<cols; c++) {
+                if(d < total) {
+                    const div = document.createElement('div');
+                    div.className = 'etiqueta-simulada';
+                    div.style.width = (w * escala) + "px";
+                    div.style.height = (h * escala) + "px";
+                    div.style.left = (((c*w)+(c*gh)) * escala) + "px";
+                    div.style.top = (((r*h)+(r*gv)) * escala) + "px";
+                    vis.appendChild(div);
+                    d++;
+                }
+            }
+        }
+    }
+    calcular();
+</script>
+</body>
+</html>
