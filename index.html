@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d47a1">
+    <title>Cirel Proforma Profesional</title>
+    <style>
+        /* CAMBIO A COLOR AZUL */
+        :root { --p-color: #0d47a1; --s-color: #1976d2; --bg: #f8f9fa; }
+        
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 10px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
+        
+        /* Franja Azul con Engranaje Integrado */
+        .header-strip { 
+            background-color: var(--p-color); 
+            height: 40px; 
+            border-radius: 8px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 15px; 
+            position: relative;
+        }
+        .settings-gear { 
+            cursor: pointer; 
+            color: rgba(255,255,255,0.7); 
+            font-size: 20px; 
+            transition: 0.3s; 
+        }
+        .settings-gear:hover { color: white; }
+
+        /* Panel Flotante Configuración */
+        .logo-config-panel { 
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 15px; 
+            background: white; 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            z-index: 101; 
+        }
+        .logo-config-panel label { font-size: 11px; font-weight: bold; color: #999; display: block; margin-bottom: 5px; }
+
+        .logo-full-width { width: 100%; text-align: center; margin-bottom: 25px; padding: 10px 0; }
+        #logo-preview { max-width: 250px; max-height: 120px; object-fit: contain; }
+        
+        .header-info-print { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .header-info-print > div { flex: 1; min-width: 250px; }
+
+        h2 { border-bottom: 2px solid #bbdefb; padding-bottom: 5px; font-size: 1.1em; text-transform: uppercase; color: var(--p-color); margin-top: 20px; }
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        @media (max-width: 600px) { .grid-inputs { grid-template-columns: 1fr; } }
+
+        .input-group, .result-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+        label { font-weight: bold; color: #555; margin-bottom: 4px; font-size: 0.85em; }
+        input { padding: 12px; border: 1px solid #90caf9; border-radius: 8px; font-size: 16px; background: #fff; text-align: right; }
+        
+        .resaltado-bloque { background-color: #e3f2fd; color: #0d47a1; padding: 10px; border-radius: 8px; font-weight: bold; text-align: right; }
+        .resaltado-rodillo { background-color: #e1f5fe; color: #0277bd; padding: 10px; border-radius: 8px; font-weight: bold; text-align: right; }
+        .resaltado-cobro { background-color: #fff3e0; color: #e65100; padding: 10px; border-radius: 8px; font-weight: bold; text-align: right; }
+        
+        .total-box { background: #e8f5e9; padding: 20px; border-radius: 12px; text-align: right; border: 2px solid #c8e6c9; margin-top: 15px; }
+        .total-val { font-size: 30px; font-weight: bold; color: #1b5e20; }
+        .subtotal-val { font-size: 18px; color: #555; margin-bottom: 5px; }
+
+        .tabla-opt { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85em; }
+        .tabla-opt th, .tabla-opt td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        .mejor-fila { background-color: #c8e6c9; border: 2px solid #2e7d32; font-weight: bold; }
+        .badge-mejor { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; }
+
+        .firma-container { display: none; margin-top: 60px; justify-content: flex-end; text-align: center; }
+        .firma-linea { border-top: 2px solid #333; width: 250px; padding-top: 5px; font-weight: bold; color: #333; }
+
+        .btn-print { background: var(--p-color); color: white; border: none; width: 100%; padding: 18px; border-radius: 12px; font-weight: bold; font-size: 18px; margin: 20px 0; cursor: pointer; }
+        
+        #vis-container { margin-top: 20px; text-align: center; background: #e3f2fd; padding: 15px; border-radius: 10px; overflow: auto; border: 1px dashed var(--p-color); }
+        #area-cirel { position: relative; background: white; margin: auto; border: 1px solid #333; }
+        .etiqueta { position: absolute; background: black; border: 0.5px solid white; }
+
+        @media print {
+            .no-print, button, .header-strip, .logo-config-panel, h2, h3, .tabla-opt, #vis-container { display: none !important; }
+            body { padding: 0; background: white; }
+            .container { box-shadow: none; max-width: 100%; padding: 0; border: none; }
+            input { border: none !important; background: transparent !important; font-size: 14pt !important; padding: 2px !important; text-align: left; }
+            .imprimir-si { border-bottom: 1px solid #eee; margin-bottom: 10px; }
+            .total-box { border: none; background: none; padding: 10px 0; }
+            .firma-container { display: flex !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-strip no-print">
+        <span class="settings-gear" onclick="toggleConfig()">⚙</span>
+        <div id="config-panel" class="logo-config-panel">
+            <label>Configurar Logo:</label>
+            <input type="file" accept="image/*" onchange="saveLogo(this)">
+        </div>
+    </div>
+
+    <div class="logo-full-width">
+        <img id="logo-preview" src="" style="display:none">
+    </div>
+
+    <div class="header-info-print">
+        <div class="imprimir-si"><label>CLIENTE:</label><input type="text" id="c_nom" placeholder="..."></div>
+        <div class="imprimir-si"><label>RUC / CI:</label><input type="text" id="c_ruc" placeholder="..."></div>
+        <div class="imprimir-si"><label>FECHA:</label><input type="text" id="fecha"></div>
+    </div>
+
+    <div class="no-print">
+        <h2>1. Datos de Entrada</h2>
+        <div class="grid-inputs">
+            <div class="input-group"><label>Ancho (mm):</label><input type="number" id="w" value="50" oninput="calc()"></div>
+            <div class="input-group"><label>Alto (mm):</label><input type="number" id="h" value="30" oninput="calc()"></div>
+            <div class="input-group"><label>Gap H (mm):</label><input type="number" id="gh" value="3" oninput="calc()"></div>
+            <div class="input-group"><label>Gap V (mm):</label><input type="number" id="gv" value="3" oninput="calc()"></div>
+            <div class="input-group"><label>Columnas:</label><input type="number" id="col" value="2" oninput="calc()"></div>
+            <div class="input-group"><label>Total Etiquetas:</label><input type="number" id="tot" value="10" oninput="calc()"></div>
+        </div>
+        <div class="grid-inputs" style="margin-top:10px;">
+            <div class="input-group"><label>Costo cm² (USD):</label><input type="number" id="costo" value="0.06" step="0.01" oninput="calc()"></div>
+            <div class="input-group"><label>IVA (%):</label><input type="number" id="iva_porcentaje" value="15" oninput="calc()"></div>
+        </div>
+    </div>
+
+    <h2>2. Desglose Técnico</h2>
+    <div class="grid-inputs no-print">
+        <div class="result-group"><label>Bloque Neto:</label><div id="dim_bloque" class="resaltado-bloque">0x0</div></div>
+        <div class="result-group"><label>P/ Rodillo (Márgenes):</label><div id="dim_rodillo" class="resaltado-rodillo">0x0</div></div>
+    </div>
+    <div class="result-group imprimir-si">
+        <label>Área de Cobro Final:</label>
+        <div id="dim_cobro" class="resaltado-cobro">0 x 0 cm</div>
+    </div>
+
+    <div class="no-print">
+        <h3>Sugerencia de Optimización</h3>
+        <div id="tabla-comparativa"></div>
+    </div>
+
+    <h2>3. Resumen de Pago</h2>
+    <div class="grid-inputs imprimir-si">
+        <div class="input-group"><label>N° de Cireles:</label><input type="number" id="n_cir" value="1" oninput="calc()"></div>
+        <div class="result-group"><label>Área Total (cm²):</label><div id="area_tot" class="resaltado-bloque" style="background:#f1f1f1; color:#333;">0</div></div>
+    </div>
+    
+    <div class="total-box imprimir-si">
+        <div class="subtotal-val">SUBTOTAL: <span id="val_subtotal">$ 0.00</span></div>
+        <div class="subtotal-val" id="label_iva">IVA (15%): <span id="val_iva">$ 0.00</span></div>
+        <hr style="border: 0; border-top: 1px solid #ccc; margin: 10px 0;" class="imprimir-si">
+        <div class="total-val">TOTAL A PAGAR: <span id="total_final">$ 0.00</span></div>
+    </div>
+
+    <div class="firma-container">
+        <div class="firma-linea">FIRMA DE GERENCIA</div>
+    </div>
+
+    <button class="btn-print no-print" onclick="window.print()">🖨️ IMPRIMIR PROFORMA</button>
+
+    <div id="vis-container" class="no-print">
+        <p style="font-size: 12px;">Esquema Técnico de Montaje</p>
+        <div id="area-cirel"><div id="vis"></div></div>
+    </div>
+</div>
+
+<script>
+    const M_LAT = 4.5, M_SUP = 6.0, M_INF = 3.0, EXC = 10.0;
+
+    window.onload = () => {
+        const saved = localStorage.getItem('cirel_logo_permanente_hermana');
+        if(saved) { 
+            const img = document.getElementById('logo-preview'); 
+            img.src = saved; 
+            img.style.display='block'; 
+        }
+        document.getElementById('fecha').value = new Date().toLocaleDateString();
+        calc();
+    };
+
+    function toggleConfig() {
+        const panel = document.getElementById('config-panel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function saveLogo(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                localStorage.setItem('cirel_logo_permanente_hermana', e.target.result);
+                const img = document.getElementById('logo-preview');
+                img.src = e.target.result; 
+                img.style.display='block';
+                document.getElementById('config-panel').style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.matches('.settings-gear') && !event.target.closest('#config-panel')) {
+            document.getElementById('config-panel').style.display = 'none';
+        }
+    }
+
+    function getVals(w, h, gh, gv, tot, col, costo, ncir, ivaPorc) {
+        const filas = Math.ceil(tot/col);
+        const bW = (col * w) + ((col-1)*gh);
+        const bH = (filas * h) + ((filas-1)*gv);
+        const iW = bW + (M_LAT*2);
+        const iH = bH + M_SUP + M_INF;
+        const cW = iW + (EXC*2);
+        const cH = iH + (EXC*2);
+        const area = (cW/10) * (cH/10);
+        const subtotal = area * costo * ncir;
+        const total = subtotal * (1 + (ivaPorc / 100));
+        return { bW, bH, iW, iH, cW, cH, area, subtotal, total, filas };
+    }
+
+    function calc() {
+        const w = parseFloat(document.getElementById('w').value)||0,
+              h = parseFloat(document.getElementById('h').value)||0,
+              gh = parseFloat(document.getElementById('gh').value)||0,
+              gv = parseFloat(document.getElementById('gv').value)||0,
+              tot = parseFloat(document.getElementById('tot').value)||0,
+              col = parseFloat(document.getElementById('col').value)||0,
+              costo = parseFloat(document.getElementById('costo').value)||0,
+              ncir = parseFloat(document.getElementById('n_cir').value)||1,
+              ivaP = parseFloat(document.getElementById('iva_porcentaje').value)||0;
+
+        if(col <= 0 || tot <= 0) return;
+
+        const res = getVals(w, h, gh, gv, tot, col, costo, ncir, ivaP);
+        const rot = getVals(h, w, gv, gh, tot, col, costo, ncir, ivaP);
+
+        document.getElementById('dim_bloque').innerText = `${(res.bW/10).toFixed(2)}x${(res.bH/10).toFixed(2)} cm`;
+        document.getElementById('dim_rodillo').innerText = `${(res.iW/10).toFixed(2)}x${(res.iH/10).toFixed(2)} cm`;
+        document.getElementById('dim_cobro').innerText = `${(res.cW/10).toFixed(2)} x ${(res.cH/10).toFixed(2)} cm`;
+        document.getElementById('area_tot').innerText = (res.area * ncir).toFixed(2);
+        
+        document.getElementById('val_subtotal').innerText = `$ ${res.subtotal.toFixed(2)}`;
+        document.getElementById('label_iva').innerHTML = `IVA (${ivaP}%): <span>$ ${(res.subtotal * (ivaP/100)).toFixed(2)}</span>`;
+        document.getElementById('total_final').innerText = `$ ${res.total.toFixed(2)}`;
+
+        const mejorNormal = res.total <= (rot.total + 0.01);
+        document.getElementById('tabla-comparativa').innerHTML = `
+            <table class="tabla-opt">
+                <tr style="background:#eee;"><th>Posición</th><th>Área de Cobro</th><th>Total</th><th>Estado</th></tr>
+                <tr class="${mejorNormal?'mejor-fila':''}">
+                    <td>Normal</td>
+                    <td>${(res.cW/10).toFixed(2)}x${(res.cH/10).toFixed(2)} cm</td>
+                    <td>$${res.total.toFixed(2)}</td>
+                    <td>${mejorNormal?'<span class="badge-mejor">RECOMENDADO</span>':'-'}</td>
+                </tr>
+                <tr class="${!mejorNormal?'mejor-fila':''}">
+                    <td>Rotada (90°)</td>
+                    <td>${(rot.cW/10).toFixed(2)}x${(rot.cH/10).toFixed(2)} cm</td>
+                    <td>$${rot.total.toFixed(2)}</td>
+                    <td>${!mejorNormal?'<span class="badge-mejor">MEJOR PRECIO</span>':'-'}</td>
+                </tr>
+            </table>`;
+
+        const vis = document.getElementById('vis');
+        const area = document.getElementById('area-cirel');
+        vis.innerHTML = '';
+        area.style.width = res.iW + "px";
+        area.style.height = res.iH + "px";
+        
+        for(let i=0; i<tot; i++) {
+            const r = Math.floor(i/col), c = i%col;
+            const d = document.createElement('div');
+            d.className = 'etiqueta';
+            d.style.width = w+"px"; d.style.height = h+"px";
+            d.style.left = (c*(w+gh) + M_LAT) + "px";
+            d.style.top = (r*(h+gv) + M_SUP) + "px";
+            vis.appendChild(d);
+        }
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+</script>
+</body>
+</html>

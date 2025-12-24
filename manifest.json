@@ -1,0 +1,16 @@
+{
+  "short_name": "Cirel Pro",
+  "name": "Cirel Proforma Profesional",
+  "icons": [
+    {
+      "src": "icono.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "theme_color": "#4a148c",
+  "background_color": "#ffffff"
+}
